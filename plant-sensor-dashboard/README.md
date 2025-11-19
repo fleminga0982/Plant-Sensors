@@ -74,18 +74,40 @@ plant-sensor-dashboard/
 | `GEMINI_API_KEY` | Google Gemini API key for plant identification | Yes |
 | `DATABASE_URL` | SQLite database connection string | Yes (auto-configured) |
 
-### Using GitHub Secrets (for deployment)
+### Using GitHub Environment Secrets (for deployment)
 
-If deploying with GitHub Actions or another CI/CD platform:
+This project includes GitHub Actions workflows that automatically use environment secrets:
+
+#### Setting up the Production Environment:
 
 1. Go to your GitHub repository settings
-2. Navigate to **Secrets and variables** → **Actions**
-3. Click **New repository secret**
-4. Add secret:
+2. Navigate to **Environments**
+3. Click **New environment** and name it `production`
+4. Under **Environment secrets**, click **Add secret**
+5. Add the following secret:
+   - Name: `GEMINI_API_KEY`
+   - Value: Your actual Gemini API key
+
+#### How it works:
+
+- **CI Workflow** (`.github/workflows/ci.yml`): Runs on pull requests and uses a mock API key for testing
+- **Deploy Workflow** (`.github/workflows/deploy.yml`): Runs on main branch and uses the `production` environment secret
+
+The code in `lib/geminiVision.ts` already checks for `process.env.GEMINI_API_KEY` and will:
+- Use the real Gemini API if the key is configured
+- Automatically fall back to a mock implementation if the key is missing
+
+#### Alternative: Repository Secrets (simpler but less secure)
+
+If you prefer not to use environments:
+
+1. Go to **Settings** → **Secrets and variables** → **Actions**
+2. Click **New repository secret**
+3. Add secret:
    - Name: `GEMINI_API_KEY`
    - Value: Your Gemini API key
 
-Your deployment workflows will automatically have access to this secret.
+Then update `.github/workflows/deploy.yml` to remove the `environment: production` line.
 
 ## Technologies
 
