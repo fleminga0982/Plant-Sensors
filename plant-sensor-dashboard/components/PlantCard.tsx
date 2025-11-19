@@ -89,19 +89,19 @@ export default function PlantCard({ plant }: PlantCardProps) {
                     <div className="grid grid-cols-4 gap-3 pt-4 border-t border-white/10">
                         <div className="text-center">
                             <p className="text-xs text-gray-500 mb-1">Temp</p>
-                            <p className="text-sm font-semibold text-white">{plant.lastReading.temperature}°</p>
+                            <p className="text-sm font-semibold text-white">{plant.lastReading?.temperature ?? 0}°</p>
                         </div>
                         <div className="text-center">
                             <p className="text-xs text-gray-500 mb-1">Humid</p>
-                            <p className="text-sm font-semibold text-white">{plant.lastReading.humidity}%</p>
+                            <p className="text-sm font-semibold text-white">{plant.lastReading?.humidity ?? 0}%</p>
                         </div>
                         <div className="text-center">
                             <p className="text-xs text-gray-500 mb-1">Light</p>
-                            <p className="text-sm font-semibold text-white">{Math.round(plant.lastReading.light / 1000)}k</p>
+                            <p className="text-sm font-semibold text-white">{Math.round((plant.lastReading?.light ?? 0) / 1000)}k</p>
                         </div>
                         <div className="text-center">
                             <p className="text-xs text-gray-500 mb-1">Soil</p>
-                            <p className="text-sm font-semibold text-white">{plant.lastReading.soilMoisture}%</p>
+                            <p className="text-sm font-semibold text-white">{plant.lastReading?.soilMoisture ?? 0}%</p>
                         </div>
                     </div>
                 </div>

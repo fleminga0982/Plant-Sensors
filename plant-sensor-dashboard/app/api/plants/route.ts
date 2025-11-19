@@ -14,14 +14,56 @@ export async function GET() {
             }
         });
 
-        // Convert imageData Buffer to base64 string for response
-        const plantsWithImages = plants.map(plant => ({
-            ...plant,
-            imageData: plant.imageData ? `data:image/jpeg;base64,${plant.imageData.toString('base64')}` : null,
-            lastReading: plant.sensorReadings[0] || null
-        }));
+        // Transform data to match frontend expectations
+        const plantsWithDetails = plants.map(plant => {
+            const lastReading = plant.sensorReadings[0] || null;
 
-        return NextResponse.json(plantsWithImages);
+            // Calculate health status
+            let status = 'good';
+            let needsWater = false;
+            let needsLight = false;
+            const recommendations = [];
+
+            if (lastReading) {
+                const { temperature, humidity, light, soilMoisture } = lastReading;
+
+                if (soilMoisture < 30) {
+                    needsWater = true;
+                    recommendations.push('Water the plant');
+                }
+                if (light < 1000) {
+                    needsLight = true;
+                    recommendations.push('Move to brighter location');
+                }
+
+                const criticalCount = [
+                    temperature >= 15 && temperature <= 28,
+                    humidity >= 40,
+                    light >= 1000,
+                    soilMoisture >= 30
+                ].filter(x => !x).length;
+
+                if (criticalCount >= 3) status = 'critical';
+                else if (criticalCount >= 2) status = 'warning';
+                else if (criticalCount === 1) status = 'good';
+                else status = 'excellent';
+            }
+
+            return {
+                ...plant,
+                imageData: plant.imageData ? `data:image/jpeg;base64,${Buffer.from(plant.imageData).toString('base64')}` : null,
+                lastReading,
+                healthAnalysis: {
+                    status,
+                    needsWater,
+                    needsLight,
+                    recommendations,
+                    geminiAnalysis: "AI analysis not yet available."
+                }
+            };
+        });
+
+        return NextResponse.json(plantsWithDetails);
     } catch (error) {
         console.error('Error fetching plants:', error);
         return NextResponse.json({ error: 'Failed to fetch plants' }, { status: 500 });

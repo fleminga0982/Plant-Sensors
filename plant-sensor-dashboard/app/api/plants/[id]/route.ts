@@ -24,9 +24,50 @@ export async function GET(
             return NextResponse.json({ error: 'Plant not found' }, { status: 404 });
         }
 
+        const lastReading = plant.sensorReadings[0] || null;
+
+        // Calculate health status
+        let status = 'good';
+        let needsWater = false;
+        let needsLight = false;
+        const recommendations = [];
+
+        if (lastReading) {
+            const { temperature, humidity, light, soilMoisture } = lastReading;
+
+            if (soilMoisture < 30) {
+                needsWater = true;
+                recommendations.push('Water the plant');
+            }
+            if (light < 1000) {
+                needsLight = true;
+                recommendations.push('Move to brighter location');
+            }
+
+            const criticalCount = [
+                temperature >= 15 && temperature <= 28,
+                humidity >= 40,
+                light >= 1000,
+                soilMoisture >= 30
+            ].filter(x => !x).length;
+
+            if (criticalCount >= 3) status = 'critical';
+            else if (criticalCount >= 2) status = 'warning';
+            else if (criticalCount === 1) status = 'good';
+            else status = 'excellent';
+        }
+
         return NextResponse.json({
             ...plant,
-            imageData: plant.imageData ? `data:image/jpeg;base64,${plant.imageData.toString('base64')}` : null
+            imageData: plant.imageData ? `data:image/jpeg;base64,${Buffer.from(plant.imageData).toString('base64')}` : null,
+            lastReading,
+            healthAnalysis: {
+                status,
+                needsWater,
+                needsLight,
+                recommendations,
+                geminiAnalysis: "AI analysis not yet available."
+            }
         });
     } catch (error) {
         console.error('Error fetching plant:', error);
@@ -67,7 +108,7 @@ export async function PUT(
 
         return NextResponse.json({
             ...plant,
-            imageData: imageData || (plant.imageData ? `data:image/jpeg;base64,${plant.imageData.toString('base64')}` : null)
+            imageData: imageData || (plant.imageData ? `data:image/jpeg;base64,${Buffer.from(plant.imageData).toString('base64')}` : null)
         });
     } catch (error) {
         console.error('Error updating plant:', error);

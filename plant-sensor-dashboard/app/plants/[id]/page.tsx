@@ -1,22 +1,86 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getPlantById, refreshPlantReading } from '@/lib/mockData';
 import SensorCard from '@/components/SensorCard';
 import { ArrowLeft, MapPin, RefreshCw, Sparkles, TrendingUp, Calendar, Activity } from 'lucide-react';
+
+interface Plant {
+    id: string;
+    name: string;
+    species: string;
+    location: string;
+    imageData: string | null;
+    identifiedSpecies: string | null;
+    identificationConfidence: number | null;
+    sensorReadings: SensorReading[];
+}
+
+interface SensorReading {
+    id: string;
+    temperature: number;
+    humidity: number;
+    light: number;
+    soilMoisture: number;
+    timestamp: string;
+}
 
 export default function PlantDetailPage() {
     const params = useParams();
     const router = useRouter();
     const [isRefreshing, setIsRefreshing] = useState(false);
-    const [plant, setPlant] = useState(() => getPlantById(params.id as string));
+    const [plant, setPlant] = useState<Plant | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    if (!plant) {
+    const fetchPlant = async () => {
+        try {
+            const response = await fetch(`/api/plants/${params.id}`);
+            if (!response.ok) {
+                if (response.status === 404) {
+                    setError('Plant not found');
+                } else {
+                    throw new Error('Failed to fetch plant');
+                }
+                return;
+            }
+            const data = await response.json();
+            setPlant(data);
+            setError(null);
+        } catch (err) {
+            console.error('Error fetching plant:', err);
+            setError('Failed to load plant data');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchPlant();
+    }, [params.id]);
+
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        await fetchPlant();
+        setTimeout(() => setIsRefreshing(false), 500);
+    };
+
+    if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <div className="text-center">
-                    <h1 className="text-2xl font-bold text-white mb-2">Plant not found</h1>
+                    <Activity className="w-12 h-12 text-emerald-400 animate-spin mx-auto mb-4" />
+                    <p className="text-gray-400">Loading plant details...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error || !plant) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="text-center">
+                    <h1 className="text-2xl font-bold text-white mb-2">{error || 'Plant not found'}</h1>
                     <button
                         onClick={() => router.push('/')}
                         className="text-emerald-400 hover:text-emerald-300"
@@ -28,16 +92,38 @@ export default function PlantDetailPage() {
         );
     }
 
-    const handleRefresh = () => {
-        setIsRefreshing(true);
-        setTimeout(() => {
-            const updatedPlant = refreshPlantReading(plant.id);
-            if (updatedPlant) {
-                setPlant(updatedPlant);
-            }
-            setIsRefreshing(false);
-        }, 1000);
+    const lastReading = plant.sensorReadings[0] || {
+        temperature: 0,
+        humidity: 0,
+        light: 0,
+        soilMoisture: 0
     };
+
+    // Calculate health status based on sensor readings
+    const getHealthStatus = () => {
+        if (!plant.sensorReadings.length) return 'good';
+
+        const temp = lastReading.temperature;
+        const humidity = lastReading.humidity;
+        const light = lastReading.light;
+        const moisture = lastReading.soilMoisture;
+
+        const tempOk = temp >= 15 && temp <= 28;
+        const humidityOk = humidity >= 40;
+        const lightOk = light >= 1000;
+        const moistureOk = moisture >= 30;
+
+        const criticalCount = [tempOk, humidityOk, lightOk, moistureOk].filter(x => !x).length;
+
+        if (criticalCount >= 3) return 'critical';
+        if (criticalCount >= 2) return 'warning';
+        if (criticalCount === 1) return 'good';
+        return 'excellent';
+    };
+
+    const healthStatus = getHealthStatus();
+    const needsWater = lastReading.soilMoisture < 30;
+    const needsLight = lastReading.light < 1000;
 
     const statusColors = {
         excellent: 'from-green-500 to-emerald-600',
@@ -89,28 +175,33 @@ export default function PlantDetailPage() {
                 </div>
 
                 {/* Status Banner */}
-                <div className={`glass rounded-3xl p-6 mb-6 border-2 ${plant.healthAnalysis.status === 'excellent' ? 'border-green-500/50 bg-green-500/5' :
-                    plant.healthAnalysis.status === 'good' ? 'border-green-400/50 bg-green-400/5' :
-                        plant.healthAnalysis.status === 'warning' ? 'border-amber-500/50 bg-amber-500/5' :
+                <div className={`glass rounded-3xl p-6 mb-6 border-2 ${healthStatus === 'excellent' ? 'border-green-500/50 bg-green-500/5' :
+                    healthStatus === 'good' ? 'border-green-400/50 bg-green-400/5' :
+                        healthStatus === 'warning' ? 'border-amber-500/50 bg-amber-500/5' :
                             'border-red-500/50 bg-red-500/5'
                     } animate-fade-in`}>
                     <div className="flex items-start gap-3">
-                        <div className={`p-3 rounded-xl bg-gradient-to-br ${statusColors[plant.healthAnalysis.status]} flex-shrink-0`}>
+                        <div className={`p-3 rounded-xl bg-gradient-to-br ${statusColors[healthStatus]} flex-shrink-0`}>
                             <TrendingUp className="w-6 h-6 text-white" />
                         </div>
                         <div className="flex-1">
                             <h3 className="text-lg font-bold text-white mb-1">
-                                Overall Status: <span className="capitalize">{plant.healthAnalysis.status}</span>
+                                Overall Status: <span className="capitalize">{healthStatus}</span>
                             </h3>
                             <div className="flex flex-wrap gap-2 mb-3">
-                                {plant.healthAnalysis.needsWater && (
+                                {needsWater && (
                                     <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-sm font-medium">
                                         💧 Needs Water
                                     </span>
                                 )}
-                                {plant.healthAnalysis.needsLight && (
+                                {needsLight && (
                                     <span className="px-3 py-1 rounded-full bg-yellow-500/20 text-yellow-300 text-sm font-medium">
                                         ☀️ Needs Light
+                                    </span>
+                                )}
+                                {!needsWater && !needsLight && (
+                                    <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-sm font-medium">
+                                        ✨ Doing Great
                                     </span>
                                 )}
                             </div>
@@ -127,48 +218,48 @@ export default function PlantDetailPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         <SensorCard
                             type="temperature"
-                            value={plant.lastReading.temperature}
+                            value={lastReading.temperature}
                             status={
-                                plant.lastReading.temperature >= 18 && plant.lastReading.temperature <= 26
+                                lastReading.temperature >= 18 && lastReading.temperature <= 26
                                     ? 'excellent'
-                                    : plant.lastReading.temperature >= 15 && plant.lastReading.temperature <= 28
+                                    : lastReading.temperature >= 15 && lastReading.temperature <= 28
                                         ? 'good'
                                         : 'warning'
                             }
                         />
                         <SensorCard
                             type="humidity"
-                            value={plant.lastReading.humidity}
+                            value={lastReading.humidity}
                             status={
-                                plant.lastReading.humidity >= 50
+                                lastReading.humidity >= 50
                                     ? 'excellent'
-                                    : plant.lastReading.humidity >= 40
+                                    : lastReading.humidity >= 40
                                         ? 'good'
                                         : 'warning'
                             }
                         />
                         <SensorCard
                             type="light"
-                            value={plant.lastReading.light}
+                            value={lastReading.light}
                             status={
-                                plant.lastReading.light >= 2000 && plant.lastReading.light <= 8000
+                                lastReading.light >= 2000 && lastReading.light <= 8000
                                     ? 'excellent'
-                                    : plant.lastReading.light >= 1000 && plant.lastReading.light <= 10000
+                                    : lastReading.light >= 1000 && lastReading.light <= 10000
                                         ? 'good'
-                                        : plant.lastReading.light < 500
+                                        : lastReading.light < 500
                                             ? 'critical'
                                             : 'warning'
                             }
                         />
                         <SensorCard
                             type="moisture"
-                            value={plant.lastReading.soilMoisture}
+                            value={lastReading.soilMoisture}
                             status={
-                                plant.lastReading.soilMoisture >= 40 && plant.lastReading.soilMoisture <= 70
+                                lastReading.soilMoisture >= 40 && lastReading.soilMoisture <= 70
                                     ? 'excellent'
-                                    : plant.lastReading.soilMoisture >= 30 && plant.lastReading.soilMoisture <= 75
+                                    : lastReading.soilMoisture >= 30 && lastReading.soilMoisture <= 75
                                         ? 'good'
-                                        : plant.lastReading.soilMoisture < 20
+                                        : lastReading.soilMoisture < 20
                                             ? 'critical'
                                             : 'warning'
                             }
@@ -176,24 +267,39 @@ export default function PlantDetailPage() {
                     </div>
                 </div>
 
-                {/* AI Analysis */}
+                {/* AI Analysis - Placeholder for now as backend doesn't store this yet */}
                 <div className="glass rounded-3xl p-6 sm:p-8 border border-purple-500/30 bg-purple-500/5 mb-6 animate-fade-in">
                     <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
                         <Sparkles className="w-6 h-6 text-purple-400" />
                         Gemini AI Analysis
                     </h2>
                     <p className="text-gray-300 leading-relaxed mb-6">
-                        {plant.healthAnalysis.geminiAnalysis}
+                        Based on the current sensor readings, your {plant.name} appears to be {healthStatus}.
+                        {needsWater ? " It looks a bit thirsty." : ""}
+                        {needsLight ? " It could use some more light." : ""}
+                        {!needsWater && !needsLight ? " Keep up the good work!" : ""}
                     </p>
 
                     <div className="space-y-2">
                         <h3 className="text-lg font-semibold text-white mb-3">Recommendations:</h3>
-                        {plant.healthAnalysis.recommendations.map((rec, index) => (
-                            <div key={index} className="flex items-start gap-3 p-3 rounded-xl bg-white/5">
-                                <div className="w-2 h-2 rounded-full bg-emerald-400 mt-2 flex-shrink-0"></div>
-                                <p className="text-gray-300">{rec}</p>
+                        {needsWater && (
+                            <div className="flex items-start gap-3 p-3 rounded-xl bg-white/5">
+                                <div className="w-2 h-2 rounded-full bg-blue-400 mt-2 flex-shrink-0"></div>
+                                <p className="text-gray-300">Check soil moisture and water if dry.</p>
                             </div>
-                        ))}
+                        )}
+                        {needsLight && (
+                            <div className="flex items-start gap-3 p-3 rounded-xl bg-white/5">
+                                <div className="w-2 h-2 rounded-full bg-yellow-400 mt-2 flex-shrink-0"></div>
+                                <p className="text-gray-300">Move to a brighter location.</p>
+                            </div>
+                        )}
+                        {!needsWater && !needsLight && (
+                            <div className="flex items-start gap-3 p-3 rounded-xl bg-white/5">
+                                <div className="w-2 h-2 rounded-full bg-emerald-400 mt-2 flex-shrink-0"></div>
+                                <p className="text-gray-300">Continue current care routine.</p>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -215,10 +321,10 @@ export default function PlantDetailPage() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {plant.historicalReadings.slice(-5).reverse().map((reading, index) => (
+                                {plant.sensorReadings.slice(0, 5).map((reading, index) => (
                                     <tr key={index} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                                         <td className="py-3 px-2 text-sm text-gray-300">
-                                            {reading.timestamp.toLocaleDateString()}
+                                            {new Date(reading.timestamp).toLocaleDateString()}
                                         </td>
                                         <td className="py-3 px-2 text-sm text-white text-right font-medium">
                                             {reading.temperature}
