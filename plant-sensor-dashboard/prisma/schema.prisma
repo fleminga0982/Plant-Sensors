@@ -1,0 +1,41 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Plant {
+  id                      String          @id @default(uuid())
+  name                    String
+  species                 String
+  location                String
+  imageData               Bytes?          // BLOB for image storage
+  identifiedSpecies       String?
+  identificationConfidence Float?
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+  
+  sensorReadings          SensorReading[]
+}
+
+model SensorReading {
+  id            String   @id @default(uuid())
+  plantId       String
+  temperature   Float
+  humidity      Float
+  light         Float
+  soilMoisture  Float
+  timestamp     DateTime @default(now())
+  
+  plant         Plant    @relation(fields: [plantId], references: [id], onDelete: Cascade)
+  
+  @@index([plantId])
+  @@index([timestamp])
+}
+
