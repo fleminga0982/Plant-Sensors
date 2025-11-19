@@ -24,6 +24,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
       
+      - name: Verify API key is loaded
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "❌ GEMINI_API_KEY is not set!"
+            exit 1
+          else
+            echo "✅ GEMINI_API_KEY is loaded (length: ${#GEMINI_API_KEY} characters)"
+          fi
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      
       - name: Setup database
         run: |
           npx prisma generate
