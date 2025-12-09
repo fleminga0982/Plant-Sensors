@@ -54,8 +54,8 @@ function analyzePlantHealth(reading: SensorReading, species: string): PlantHealt
 
     // Mock Gemini analysis text
     const geminiAnalysis = `Based on current sensor data for your ${species}, environmental conditions are ${status}. ${needsWater
-            ? 'The soil moisture level indicates your plant needs watering. '
-            : 'Soil moisture is adequate. '
+        ? 'The soil moisture level indicates your plant needs watering. '
+        : 'Soil moisture is adequate. '
         }${needsLight
             ? 'Light exposure should be increased for optimal photosynthesis. '
             : 'Light levels are appropriate. '
@@ -112,7 +112,7 @@ export const mockPlants: Plant[] = [
         name: 'Monstera Deliciosa',
         species: 'Monstera deliciosa',
         location: 'Living Room',
-        imageUrl: '/plants/monstera.jpg',
+        imageData: null,
         lastReading: generateReading(),
         healthAnalysis: {} as PlantHealthAnalysis, // Will be filled below
         historicalReadings: generateHistoricalReadings()
@@ -122,7 +122,7 @@ export const mockPlants: Plant[] = [
         name: 'Snake Plant',
         species: 'Sansevieria trifasciata',
         location: 'Bedroom',
-        imageUrl: '/plants/snake.jpg',
+        imageData: null,
         lastReading: generateReading(),
         healthAnalysis: {} as PlantHealthAnalysis,
         historicalReadings: generateHistoricalReadings()
@@ -132,7 +132,7 @@ export const mockPlants: Plant[] = [
         name: 'Fiddle Leaf Fig',
         species: 'Ficus lyrata',
         location: 'Office',
-        imageUrl: '/plants/fiddle.jpg',
+        imageData: null,
         lastReading: generateReading(),
         healthAnalysis: {} as PlantHealthAnalysis,
         historicalReadings: generateHistoricalReadings()
@@ -142,7 +142,7 @@ export const mockPlants: Plant[] = [
         name: 'Peace Lily',
         species: 'Spathiphyllum',
         location: 'Kitchen',
-        imageUrl: '/plants/peace-lily.jpg',
+        imageData: null,
         lastReading: generateReading(),
         healthAnalysis: {} as PlantHealthAnalysis,
         historicalReadings: generateHistoricalReadings()
@@ -152,7 +152,7 @@ export const mockPlants: Plant[] = [
         name: 'Pothos',
         species: 'Epipremnum aureum',
         location: 'Bathroom',
-        imageUrl: '/plants/pothos.jpg',
+        imageData: null,
         lastReading: generateReading(),
         healthAnalysis: {} as PlantHealthAnalysis,
         historicalReadings: generateHistoricalReadings()
@@ -162,7 +162,7 @@ export const mockPlants: Plant[] = [
         name: 'Spider Plant',
         species: 'Chlorophytum comosum',
         location: 'Hallway',
-        imageUrl: '/plants/spider.jpg',
+        imageData: null,
         lastReading: generateReading(),
         healthAnalysis: {} as PlantHealthAnalysis,
         historicalReadings: generateHistoricalReadings()

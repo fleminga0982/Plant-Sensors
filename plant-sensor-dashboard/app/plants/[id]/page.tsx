@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import SensorCard from '@/components/SensorCard';
-import { ArrowLeft, MapPin, RefreshCw, Sparkles, TrendingUp, Calendar, Activity } from 'lucide-react';
+import { ArrowLeft, MapPin, RefreshCw, Sparkles, TrendingUp, Calendar, Activity, Droplets, Sun, Thermometer, Trash2 } from 'lucide-react';
 
 interface Plant {
     id: string;
@@ -65,12 +65,34 @@ export default function PlantDetailPage() {
         setTimeout(() => setIsRefreshing(false), 500);
     };
 
+    const handleDelete = async () => {
+        if (!confirm('Are you sure you want to delete this plant? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/plants/${params.id}`, {
+                method: 'DELETE',
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to delete plant');
+            }
+
+            router.push('/');
+        } catch (err) {
+            console.error('Error deleting plant:', err);
+            setError('Failed to delete plant');
+        }
+    };
+
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <Activity className="w-12 h-12 text-emerald-400 animate-spin mx-auto mb-4" />
-                    <p className="text-gray-400">Loading plant details...</p>
+            <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
+                <div className="text-center relative">
+                    <div className="absolute inset-0 bg-emerald-500/20 blur-3xl rounded-full animate-pulse-glow" />
+                    <Activity className="w-16 h-16 text-emerald-500 animate-spin mx-auto mb-6 relative z-10" />
+                    <p className="text-gray-400 text-lg font-medium tracking-wide animate-pulse">Analyzing Biosignals...</p>
                 </div>
             </div>
         );
@@ -78,13 +100,14 @@ export default function PlantDetailPage() {
 
     if (error || !plant) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <h1 className="text-2xl font-bold text-white mb-2">{error || 'Plant not found'}</h1>
+            <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
+                <div className="text-center glass-panel p-12 rounded-3xl">
+                    <h1 className="text-2xl font-bold text-white mb-4">{error || 'Plant not found'}</h1>
                     <button
                         onClick={() => router.push('/')}
-                        className="text-emerald-400 hover:text-emerald-300"
+                        className="text-emerald-400 hover:text-emerald-300 font-medium flex items-center gap-2 mx-auto"
                     >
+                        <ArrowLeft className="w-4 h-4" />
                         Return to Dashboard
                     </button>
                 </div>
@@ -125,218 +148,228 @@ export default function PlantDetailPage() {
     const needsWater = lastReading.soilMoisture < 30;
     const needsLight = lastReading.light < 1000;
 
-    const statusColors = {
-        excellent: 'from-green-500 to-emerald-600',
-        good: 'from-green-400 to-green-500',
-        warning: 'from-amber-500 to-orange-600',
-        critical: 'from-red-500 to-rose-600'
+    const statusConfig = {
+        excellent: { color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', gradient: 'from-emerald-500 to-teal-500' },
+        good: { color: 'text-teal-400', bg: 'bg-teal-500/10', border: 'border-teal-500/20', gradient: 'from-teal-400 to-cyan-500' },
+        warning: { color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20', gradient: 'from-amber-400 to-orange-500' },
+        critical: { color: 'text-rose-400', bg: 'bg-rose-500/10', border: 'border-rose-500/20', gradient: 'from-rose-500 to-red-600' }
     };
 
-    return (
-        <div className="min-h-screen p-4 sm:p-6 lg:p-8">
-            <div className="max-w-6xl mx-auto">
-                {/* Back Button */}
-                <button
-                    onClick={() => router.push('/')}
-                    className="flex items-center gap-2 text-gray-400 hover:text-emerald-400 mb-6 transition-colors group"
-                >
-                    <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-                    <span>Back to Dashboard</span>
-                </button>
+    const currentStatus = statusConfig[healthStatus];
 
-                {/* Header */}
-                <div className="glass rounded-3xl p-6 sm:p-8 mb-6 border border-white/10 animate-fade-in">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                        <div className="flex items-center gap-4">
-                            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-500/30 to-green-600/30 flex items-center justify-center text-5xl">
-                                🌿
+    return (
+        <div className="min-h-screen px-6 sm:px-12 lg:px-24 py-12 relative overflow-hidden bg-[#0a0a0a]">
+            {/* Ambient Background */}
+            <div className="fixed top-0 right-0 w-[600px] h-[600px] bg-emerald-500/5 rounded-full blur-[120px] translate-x-1/3 -translate-y-1/3 pointer-events-none" />
+            <div className="fixed bottom-0 left-0 w-[600px] h-[600px] bg-blue-500/5 rounded-full blur-[120px] -translate-x-1/3 translate-y-1/3 pointer-events-none" />
+
+            <div className="max-w-7xl mx-auto relative z-10">
+                {/* Navigation */}
+                {/* Navigation */}
+                <div className="flex items-center justify-between mb-12">
+                    <button
+                        onClick={() => router.push('/')}
+                        className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors group bg-white/5 px-4 py-2 rounded-full w-fit hover:bg-white/10"
+                    >
+                        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                        <span className="text-sm font-medium">Dashboard</span>
+                    </button>
+
+                    <button
+                        onClick={handleDelete}
+                        className="flex items-center gap-2 text-rose-400 hover:text-rose-300 transition-colors group bg-rose-500/10 px-4 py-2 rounded-full w-fit hover:bg-rose-500/20 border border-rose-500/20"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                        <span className="text-sm font-medium">Delete Plant</span>
+                    </button>
+                </div>
+
+                {/* Hero Section */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12 animate-slide-up">
+                    {/* Plant Image Card */}
+                    <div className="lg:col-span-1 h-[400px] lg:h-auto relative rounded-3xl overflow-hidden group">
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-10" />
+                        {plant.imageData ? (
+                            <img
+                                src={plant.imageData}
+                                alt={plant.name}
+                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                            />
+                        ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+                                <span className="text-8xl filter drop-shadow-lg animate-float">🌿</span>
                             </div>
-                            <div>
-                                <h1 className="text-3xl sm:text-4xl font-bold text-white mb-1">
-                                    {plant.name}
-                                </h1>
-                                <p className="text-gray-400 italic mb-2">{plant.species}</p>
-                                <div className="flex items-center gap-2 text-sm">
-                                    <MapPin className="w-4 h-4 text-emerald-500" />
-                                    <span className="text-gray-300">{plant.location}</span>
+                        )}
+
+                        <div className="absolute bottom-0 left-0 right-0 p-8 z-20">
+                            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full backdrop-blur-md border mb-4 ${currentStatus.bg} ${currentStatus.border} ${currentStatus.color}`}>
+                                <Activity className="w-4 h-4" />
+                                <span className="text-xs font-bold uppercase tracking-wider">{healthStatus}</span>
+                            </div>
+                            <h1 className="text-4xl font-bold text-white mb-2">{plant.name}</h1>
+                            <p className="text-gray-300 text-lg font-medium mb-1">{plant.species}</p>
+                            <div className="flex items-center gap-2 text-gray-400 text-sm">
+                                <MapPin className="w-4 h-4" />
+                                <span>{plant.location}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Stats & AI Analysis */}
+                    <div className="lg:col-span-2 flex flex-col gap-8">
+                        {/* AI Insight Card */}
+                        <div className="glass-panel rounded-3xl p-8 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-8 opacity-5">
+                                <Sparkles className="w-32 h-32 text-white" />
+                            </div>
+
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2.5 bg-purple-500/20 rounded-xl border border-purple-500/30">
+                                        <Sparkles className="w-5 h-5 text-purple-400" />
+                                    </div>
+                                    <h2 className="text-xl font-bold text-white">Gemini Analysis</h2>
+                                </div>
+                                <button
+                                    onClick={handleRefresh}
+                                    disabled={isRefreshing}
+                                    className="p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors"
+                                >
+                                    <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                                </button>
+                            </div>
+
+                            <p className="text-gray-300 leading-relaxed text-lg mb-8">
+                                Based on the current sensor readings, your {plant.name} appears to be <span className={currentStatus.color + " font-bold"}>{healthStatus}</span>.
+                                {needsWater ? " It looks a bit thirsty." : ""}
+                                {needsLight ? " It could use some more light." : ""}
+                                {!needsWater && !needsLight ? " Keep up the good work!" : ""}
+                            </p>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div className={`p-4 rounded-2xl bg-white/5 border border-white/5 ${needsWater ? 'border-blue-500/30 bg-blue-500/10' : ''}`}>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Droplets className={`w-4 h-4 ${needsWater ? 'text-blue-400' : 'text-gray-500'}`} />
+                                        <span className={`text-xs font-bold uppercase tracking-wider ${needsWater ? 'text-blue-300' : 'text-gray-500'}`}>Water</span>
+                                    </div>
+                                    <p className={`text-sm font-medium ${needsWater ? 'text-white' : 'text-gray-400'}`}>
+                                        {needsWater ? 'Check soil moisture' : 'Levels optimal'}
+                                    </p>
+                                </div>
+
+                                <div className={`p-4 rounded-2xl bg-white/5 border border-white/5 ${needsLight ? 'border-yellow-500/30 bg-yellow-500/10' : ''}`}>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Sun className={`w-4 h-4 ${needsLight ? 'text-yellow-400' : 'text-gray-500'}`} />
+                                        <span className={`text-xs font-bold uppercase tracking-wider ${needsLight ? 'text-yellow-300' : 'text-gray-500'}`}>Light</span>
+                                    </div>
+                                    <p className={`text-sm font-medium ${needsLight ? 'text-white' : 'text-gray-400'}`}>
+                                        {needsLight ? 'Move to brighter spot' : 'Levels optimal'}
+                                    </p>
+                                </div>
+
+                                <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Thermometer className="w-4 h-4 text-gray-500" />
+                                        <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Temp</span>
+                                    </div>
+                                    <p className="text-sm font-medium text-gray-400">
+                                        Range optimal
+                                    </p>
                                 </div>
                             </div>
                         </div>
 
-                        <button
-                            onClick={handleRefresh}
-                            disabled={isRefreshing}
-                            className="glass px-6 py-3 rounded-xl border border-emerald-500/50 hover:border-emerald-400 hover:bg-emerald-500/10 transition-all flex items-center gap-2 group"
-                        >
-                            <RefreshCw className={`w-5 h-5 text-emerald-400 ${isRefreshing ? 'animate-spin' : 'group-hover:rotate-180'} transition-transform duration-500`} />
-                            <span className="text-white font-medium">Refresh</span>
-                        </button>
-                    </div>
-                </div>
-
-                {/* Status Banner */}
-                <div className={`glass rounded-3xl p-6 mb-6 border-2 ${healthStatus === 'excellent' ? 'border-green-500/50 bg-green-500/5' :
-                    healthStatus === 'good' ? 'border-green-400/50 bg-green-400/5' :
-                        healthStatus === 'warning' ? 'border-amber-500/50 bg-amber-500/5' :
-                            'border-red-500/50 bg-red-500/5'
-                    } animate-fade-in`}>
-                    <div className="flex items-start gap-3">
-                        <div className={`p-3 rounded-xl bg-gradient-to-br ${statusColors[healthStatus]} flex-shrink-0`}>
-                            <TrendingUp className="w-6 h-6 text-white" />
-                        </div>
-                        <div className="flex-1">
-                            <h3 className="text-lg font-bold text-white mb-1">
-                                Overall Status: <span className="capitalize">{healthStatus}</span>
-                            </h3>
-                            <div className="flex flex-wrap gap-2 mb-3">
-                                {needsWater && (
-                                    <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-sm font-medium">
-                                        💧 Needs Water
-                                    </span>
-                                )}
-                                {needsLight && (
-                                    <span className="px-3 py-1 rounded-full bg-yellow-500/20 text-yellow-300 text-sm font-medium">
-                                        ☀️ Needs Light
-                                    </span>
-                                )}
-                                {!needsWater && !needsLight && (
-                                    <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-sm font-medium">
-                                        ✨ Doing Great
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Sensor Readings */}
-                <div className="mb-6">
-                    <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-                        <Activity className="w-6 h-6 text-emerald-400" />
-                        Current Readings
-                    </h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <SensorCard
-                            type="temperature"
-                            value={lastReading.temperature}
-                            status={
-                                lastReading.temperature >= 18 && lastReading.temperature <= 26
-                                    ? 'excellent'
-                                    : lastReading.temperature >= 15 && lastReading.temperature <= 28
-                                        ? 'good'
-                                        : 'warning'
-                            }
-                        />
-                        <SensorCard
-                            type="humidity"
-                            value={lastReading.humidity}
-                            status={
-                                lastReading.humidity >= 50
-                                    ? 'excellent'
-                                    : lastReading.humidity >= 40
-                                        ? 'good'
-                                        : 'warning'
-                            }
-                        />
-                        <SensorCard
-                            type="light"
-                            value={lastReading.light}
-                            status={
-                                lastReading.light >= 2000 && lastReading.light <= 8000
-                                    ? 'excellent'
-                                    : lastReading.light >= 1000 && lastReading.light <= 10000
-                                        ? 'good'
-                                        : lastReading.light < 500
-                                            ? 'critical'
+                        {/* Sensor Grid */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            <SensorCard
+                                type="temperature"
+                                value={lastReading.temperature}
+                                status={
+                                    lastReading.temperature >= 18 && lastReading.temperature <= 26
+                                        ? 'excellent'
+                                        : lastReading.temperature >= 15 && lastReading.temperature <= 28
+                                            ? 'good'
                                             : 'warning'
-                            }
-                        />
-                        <SensorCard
-                            type="moisture"
-                            value={lastReading.soilMoisture}
-                            status={
-                                lastReading.soilMoisture >= 40 && lastReading.soilMoisture <= 70
-                                    ? 'excellent'
-                                    : lastReading.soilMoisture >= 30 && lastReading.soilMoisture <= 75
-                                        ? 'good'
-                                        : lastReading.soilMoisture < 20
-                                            ? 'critical'
+                                }
+                            />
+                            <SensorCard
+                                type="humidity"
+                                value={lastReading.humidity}
+                                status={
+                                    lastReading.humidity >= 50
+                                        ? 'excellent'
+                                        : lastReading.humidity >= 40
+                                            ? 'good'
                                             : 'warning'
-                            }
-                        />
+                                }
+                            />
+                            <SensorCard
+                                type="light"
+                                value={lastReading.light}
+                                status={
+                                    lastReading.light >= 2000 && lastReading.light <= 8000
+                                        ? 'excellent'
+                                        : lastReading.light >= 1000 && lastReading.light <= 10000
+                                            ? 'good'
+                                            : lastReading.light < 500
+                                                ? 'critical'
+                                                : 'warning'
+                                }
+                            />
+                            <SensorCard
+                                type="moisture"
+                                value={lastReading.soilMoisture}
+                                status={
+                                    lastReading.soilMoisture >= 40 && lastReading.soilMoisture <= 70
+                                        ? 'excellent'
+                                        : lastReading.soilMoisture >= 30 && lastReading.soilMoisture <= 75
+                                            ? 'good'
+                                            : lastReading.soilMoisture < 20
+                                                ? 'critical'
+                                                : 'warning'
+                                }
+                            />
+                        </div>
                     </div>
                 </div>
 
-                {/* AI Analysis - Placeholder for now as backend doesn't store this yet */}
-                <div className="glass rounded-3xl p-6 sm:p-8 border border-purple-500/30 bg-purple-500/5 mb-6 animate-fade-in">
-                    <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-                        <Sparkles className="w-6 h-6 text-purple-400" />
-                        Gemini AI Analysis
-                    </h2>
-                    <p className="text-gray-300 leading-relaxed mb-6">
-                        Based on the current sensor readings, your {plant.name} appears to be {healthStatus}.
-                        {needsWater ? " It looks a bit thirsty." : ""}
-                        {needsLight ? " It could use some more light." : ""}
-                        {!needsWater && !needsLight ? " Keep up the good work!" : ""}
-                    </p>
-
-                    <div className="space-y-2">
-                        <h3 className="text-lg font-semibold text-white mb-3">Recommendations:</h3>
-                        {needsWater && (
-                            <div className="flex items-start gap-3 p-3 rounded-xl bg-white/5">
-                                <div className="w-2 h-2 rounded-full bg-blue-400 mt-2 flex-shrink-0"></div>
-                                <p className="text-gray-300">Check soil moisture and water if dry.</p>
-                            </div>
-                        )}
-                        {needsLight && (
-                            <div className="flex items-start gap-3 p-3 rounded-xl bg-white/5">
-                                <div className="w-2 h-2 rounded-full bg-yellow-400 mt-2 flex-shrink-0"></div>
-                                <p className="text-gray-300">Move to a brighter location.</p>
-                            </div>
-                        )}
-                        {!needsWater && !needsLight && (
-                            <div className="flex items-start gap-3 p-3 rounded-xl bg-white/5">
-                                <div className="w-2 h-2 rounded-full bg-emerald-400 mt-2 flex-shrink-0"></div>
-                                <p className="text-gray-300">Continue current care routine.</p>
-                            </div>
-                        )}
+                {/* History Section */}
+                <div className="glass-panel rounded-3xl p-8 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+                    <div className="flex items-center gap-3 mb-8">
+                        <div className="p-2.5 bg-emerald-500/20 rounded-xl border border-emerald-500/30">
+                            <Calendar className="w-5 h-5 text-emerald-400" />
+                        </div>
+                        <h2 className="text-xl font-bold text-white">Recent History</h2>
                     </div>
-                </div>
 
-                {/* Historical Data Preview */}
-                <div className="glass rounded-3xl p-6 sm:p-8 border border-white/10 animate-fade-in">
-                    <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-                        <Calendar className="w-6 h-6 text-emerald-400" />
-                        Recent History
-                    </h2>
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead>
                                 <tr className="border-b border-white/10">
-                                    <th className="text-left py-3 px-2 text-sm font-semibold text-gray-400">Date</th>
-                                    <th className="text-right py-3 px-2 text-sm font-semibold text-gray-400">Temp (°C)</th>
-                                    <th className="text-right py-3 px-2 text-sm font-semibold text-gray-400">Humidity (%)</th>
-                                    <th className="text-right py-3 px-2 text-sm font-semibold text-gray-400">Light (lux)</th>
-                                    <th className="text-right py-3 px-2 text-sm font-semibold text-gray-400">Moisture (%)</th>
+                                    <th className="text-left py-4 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Date</th>
+                                    <th className="text-right py-4 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Temp</th>
+                                    <th className="text-right py-4 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Humidity</th>
+                                    <th className="text-right py-4 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Light</th>
+                                    <th className="text-right py-4 px-4 text-xs font-bold text-gray-500 uppercase tracking-wider">Moisture</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {plant.sensorReadings.slice(0, 5).map((reading, index) => (
-                                    <tr key={index} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                                        <td className="py-3 px-2 text-sm text-gray-300">
+                                    <tr key={index} className="border-b border-white/5 hover:bg-white/5 transition-colors group">
+                                        <td className="py-4 px-4 text-sm text-gray-300 font-medium">
                                             {new Date(reading.timestamp).toLocaleDateString()}
                                         </td>
-                                        <td className="py-3 px-2 text-sm text-white text-right font-medium">
-                                            {reading.temperature}
+                                        <td className="py-4 px-4 text-sm text-white text-right font-medium group-hover:text-emerald-400 transition-colors">
+                                            {reading.temperature}°C
                                         </td>
-                                        <td className="py-3 px-2 text-sm text-white text-right font-medium">
-                                            {reading.humidity}
+                                        <td className="py-4 px-4 text-sm text-white text-right font-medium group-hover:text-blue-400 transition-colors">
+                                            {reading.humidity}%
                                         </td>
-                                        <td className="py-3 px-2 text-sm text-white text-right font-medium">
-                                            {Math.round(reading.light).toLocaleString()}
+                                        <td className="py-4 px-4 text-sm text-white text-right font-medium group-hover:text-yellow-400 transition-colors">
+                                            {Math.round(reading.light).toLocaleString()} lux
                                         </td>
-                                        <td className="py-3 px-2 text-sm text-white text-right font-medium">
-                                            {reading.soilMoisture}
+                                        <td className="py-4 px-4 text-sm text-white text-right font-medium group-hover:text-emerald-400 transition-colors">
+                                            {reading.soilMoisture}%
                                         </td>
                                     </tr>
                                 ))}

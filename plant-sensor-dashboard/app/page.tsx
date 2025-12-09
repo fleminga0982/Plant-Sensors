@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import PlantCard from '@/components/PlantCard';
 import PlantIdentificationModal from '@/components/PlantIdentificationModal';
-import { Leaf, Activity, AlertCircle, CheckCircle, Plus } from 'lucide-react';
+import { Leaf, Activity, CheckCircle, AlertTriangle, Plus, Wind, Droplets } from 'lucide-react';
 
 interface Plant {
   id: string;
@@ -13,6 +13,7 @@ interface Plant {
   imageData: string | null;
   lastReading: any;
   healthAnalysis: any;
+  historicalReadings: any[];
 }
 
 export default function DashboardPage() {
@@ -29,6 +30,7 @@ export default function DashboardPage() {
       // Transform API data to match component expectations
       const transformedPlants = data.map((plant: any) => ({
         ...plant,
+        historicalReadings: [],
         healthAnalysis: {
           status: 'good' as const,
           needsWater: false,
@@ -65,71 +67,107 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Activity className="w-12 h-12 text-emerald-400 animate-spin mx-auto mb-4" />
-          <p className="text-gray-400">Loading plants...</p>
+      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a]">
+        <div className="text-center relative">
+          <div className="absolute inset-0 bg-emerald-500/20 blur-3xl rounded-full animate-pulse-glow" />
+          <Activity className="w-16 h-16 text-emerald-500 animate-spin mx-auto mb-6 relative z-10" />
+          <p className="text-gray-400 text-lg font-medium tracking-wide animate-pulse">Syncing Ecosystem...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8 sm:mb-12 animate-fade-in">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-3 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600">
-              <Leaf className="w-8 h-8 text-white" />
+    <div className="min-h-screen px-6 sm:px-12 lg:px-24 py-12 relative overflow-hidden">
+      {/* Background Ambient Glows */}
+      <div className="fixed top-0 left-0 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[120px] -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
+      <div className="fixed bottom-0 right-0 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px] translate-x-1/2 translate-y-1/2 pointer-events-none" />
+
+      <div className="max-w-7xl mx-auto relative z-10">
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-20 animate-slide-up">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
+                <Leaf className="w-6 h-6 text-emerald-500" />
+              </div>
+              <span className="text-emerald-500 font-bold tracking-wider text-sm uppercase">Plant Sensor Dashboard</span>
             </div>
-            <div>
-              <h1 className="text-4xl sm:text-5xl font-bold gradient-text">
-                Plant Dashboard
-              </h1>
-              <p className="text-gray-400 mt-1">Monitor your plants in real-time</p>
+            <h1 className="text-4xl md:text-5xl font-bold text-white tracking-tight mb-4">
+              Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400">Indoor Jungle</span>
+            </h1>
+            <p className="text-gray-400 text-lg max-w-xl">
+              Real-time monitoring and AI-powered insights for your botanical collection.
+            </p>
+          </div>
+
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="mt-8 md:mt-0 group flex items-center gap-3 bg-white text-black px-8 py-4 rounded-full font-bold hover:bg-emerald-400 transition-all duration-300 hover:scale-105 shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)]"
+          >
+            <Plus className="w-5 h-5 transition-transform group-hover:rotate-90" />
+            Add New Plant
+          </button>
+        </div>
+
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-32 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+          {/* Total Plants */}
+          <div className="glass-panel p-6 rounded-3xl flex items-center gap-5 relative overflow-hidden group hover:bg-white/5 transition-colors">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0 border border-emerald-500/20 group-hover:scale-110 transition-transform duration-300">
+              <Leaf className="w-8 h-8 text-emerald-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Total Plants</p>
+              <div className="flex items-baseline gap-2">
+                <p className="text-3xl font-bold text-white">{stats.total}</p>
+                <span className="text-xs text-emerald-400 font-medium bg-emerald-400/10 px-2 py-0.5 rounded-full">Active</span>
+              </div>
             </div>
           </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8">
-            <div className="glass rounded-2xl p-4 border border-white/10">
-              <div className="flex items-center gap-3">
-                <Activity className="w-8 h-8 text-emerald-400" />
-                <div>
-                  <p className="text-2xl font-bold text-white">{stats.total}</p>
-                  <p className="text-xs text-gray-400">Total Plants</p>
-                </div>
+          {/* Thriving */}
+          <div className="glass-panel p-6 rounded-3xl flex items-center gap-5 relative overflow-hidden group hover:bg-white/5 transition-colors">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0 border border-emerald-500/20 group-hover:scale-110 transition-transform duration-300">
+              <CheckCircle className="w-8 h-8 text-emerald-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Thriving</p>
+              <div className="flex items-baseline gap-2">
+                <p className="text-3xl font-bold text-white">{stats.excellent}</p>
+                <span className="text-xs text-emerald-400 font-medium bg-emerald-400/10 px-2 py-0.5 rounded-full">
+                  {stats.total > 0 ? Math.round((stats.excellent / stats.total) * 100) : 0}%
+                </span>
               </div>
             </div>
+          </div>
 
-            <div className="glass rounded-2xl p-4 border border-green-500/30 bg-green-500/5">
-              <div className="flex items-center gap-3">
-                <CheckCircle className="w-8 h-8 text-green-400" />
-                <div>
-                  <p className="text-2xl font-bold text-white">{stats.excellent}</p>
-                  <p className="text-xs text-gray-400">Thriving</p>
-                </div>
+          {/* Needs Attention */}
+          <div className="glass-panel p-6 rounded-3xl flex items-center gap-5 relative overflow-hidden group hover:bg-white/5 transition-colors">
+            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 flex items-center justify-center flex-shrink-0 border border-amber-500/20 group-hover:scale-110 transition-transform duration-300">
+              <AlertTriangle className="w-8 h-8 text-amber-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Needs Attention</p>
+              <div className="flex items-baseline gap-2">
+                <p className="text-3xl font-bold text-white">{stats.warning}</p>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${stats.warning > 0 ? 'text-amber-400 bg-amber-400/10' : 'text-gray-400 bg-gray-400/10'}`}>
+                  {stats.warning} Alerts
+                </span>
               </div>
             </div>
+          </div>
 
-            <div className="glass rounded-2xl p-4 border border-amber-500/30 bg-amber-500/5">
-              <div className="flex items-center gap-3">
-                <AlertCircle className="w-8 h-8 text-amber-400" />
-                <div>
-                  <p className="text-2xl font-bold text-white">{stats.warning}</p>
-                  <p className="text-xs text-gray-400">Attention</p>
-                </div>
-              </div>
+          {/* Avg Humidity */}
+          <div className="glass-panel p-6 rounded-3xl flex items-center gap-5 relative overflow-hidden group hover:bg-white/5 transition-colors">
+            <div className="w-16 h-16 rounded-2xl bg-blue-500/10 flex items-center justify-center flex-shrink-0 border border-blue-500/20 group-hover:scale-110 transition-transform duration-300">
+              <Droplets className="w-8 h-8 text-blue-400" />
             </div>
-
-            <div className="glass rounded-2xl p-4 border border-red-500/30 bg-red-500/5">
-              <div className="flex items-center gap-3">
-                <AlertCircle className="w-8 h-8 text-red-400" />
-                <div>
-                  <p className="text-2xl font-bold text-white">{stats.critical}</p>
-                  <p className="text-xs text-gray-400">Critical</p>
-                </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Avg Humidity</p>
+              <div className="flex items-baseline gap-2">
+                <p className="text-3xl font-bold text-white">45%</p>
+                <span className="text-xs text-blue-400 font-medium bg-blue-400/10 px-2 py-0.5 rounded-full">Optimal</span>
               </div>
             </div>
           </div>
@@ -137,21 +175,25 @@ export default function DashboardPage() {
 
         {/* Plants Grid */}
         {plants.length === 0 ? (
-          <div className="text-center py-16">
-            <Leaf className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-400 mb-2">No plants yet</h3>
-            <p className="text-gray-500 mb-6">Add your first plant to start monitoring</p>
+          <div className="glass-panel rounded-3xl p-16 text-center animate-slide-up" style={{ animationDelay: '0.2s' }}>
+            <div className="w-32 h-32 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-full flex items-center justify-center mx-auto mb-8 animate-pulse-glow">
+              <Leaf className="w-16 h-16 text-emerald-400" />
+            </div>
+            <h3 className="text-3xl font-bold text-white mb-4">Your sanctuary is empty</h3>
+            <p className="text-gray-400 mb-10 max-w-md mx-auto text-lg">
+              Start building your digital garden by adding your first plant sensor.
+            </p>
             <button
               onClick={() => setShowAddModal(true)}
-              className="bg-gradient-to-r from-emerald-500 to-green-600 px-8 py-3 rounded-xl text-white font-medium hover:from-emerald-400 hover:to-green-500 transition-all"
+              className="bg-emerald-600 text-white px-10 py-4 rounded-xl font-bold hover:bg-emerald-500 transition-all shadow-lg hover:shadow-emerald-500/30"
             >
               Add Your First Plant
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 animate-slide-up" style={{ animationDelay: '0.2s' }}>
             {plants.map((plant, index) => (
-              <div key={plant.id} style={{ animationDelay: `${index * 100}ms` }}>
+              <div key={plant.id} style={{ animationDelay: `${index * 100}ms` }} className="animate-slide-up">
                 <PlantCard plant={plant} />
               </div>
             ))}
@@ -159,22 +201,15 @@ export default function DashboardPage() {
         )}
 
         {/* Footer */}
-        <div className="mt-12 text-center">
-          <p className="text-sm text-gray-500">
-            Powered by Gemini AI • Real-time monitoring
-          </p>
+        <div className="mt-32 text-center border-t border-white/5 pt-12 pb-12">
+          <div className="flex items-center justify-center gap-2 opacity-50 hover:opacity-100 transition-opacity">
+            <Wind className="w-4 h-4 text-emerald-500" />
+            <p className="text-sm text-gray-500">
+              Powered by Gemini AI • Real-time Eco-Monitoring
+            </p>
+          </div>
         </div>
       </div>
-
-      {/* Floating Add Button */}
-      {plants.length > 0 && (
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-r from-emerald-500 to-green-600 rounded-full shadow-2xl hover:shadow-emerald-500/50 hover:scale-110 transition-all flex items-center justify-center group"
-        >
-          <Plus className="w-8 h-8 text-white" />
-        </button>
-      )}
 
       {/* Add Plant Modal */}
       <PlantIdentificationModal

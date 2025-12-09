@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
-import { identifyPlant } from '@/lib/geminiVision';
 
-// GET /api/plants/:id - Get plant details with readings
+const API_URL = process.env.SPRING_BOOT_API_URL || 'http://localhost:8081';
+
+// GET /api/plants/:id - Get plant details
 export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
@@ -10,110 +10,49 @@ export async function GET(
     try {
         const { id } = await params;
 
-        const plant = await prisma.plant.findUnique({
-            where: { id },
-            include: {
-                sensorReadings: {
-                    orderBy: { timestamp: 'desc' },
-                    take: 10
-                }
-            }
-        });
-
-        if (!plant) {
+        const response = await fetch(`${API_URL}/plant-manager/${id}`);
+        if (response.status === 404) {
             return NextResponse.json({ error: 'Plant not found' }, { status: 404 });
         }
-
-        const lastReading = plant.sensorReadings[0] || null;
-
-        // Calculate health status
-        let status = 'good';
-        let needsWater = false;
-        let needsLight = false;
-        const recommendations = [];
-
-        if (lastReading) {
-            const { temperature, humidity, light, soilMoisture } = lastReading;
-
-            if (soilMoisture < 30) {
-                needsWater = true;
-                recommendations.push('Water the plant');
-            }
-            if (light < 1000) {
-                needsLight = true;
-                recommendations.push('Move to brighter location');
-            }
-
-            const criticalCount = [
-                temperature >= 15 && temperature <= 28,
-                humidity >= 40,
-                light >= 1000,
-                soilMoisture >= 30
-            ].filter(x => !x).length;
-
-            if (criticalCount >= 3) status = 'critical';
-            else if (criticalCount >= 2) status = 'warning';
-            else if (criticalCount === 1) status = 'good';
-            else status = 'excellent';
+        if (!response.ok) {
+            throw new Error(`Backend responded with ${response.status}`);
         }
 
-        return NextResponse.json({
-            ...plant,
-            imageData: plant.imageData ? `data:image/jpeg;base64,${Buffer.from(plant.imageData).toString('base64')}` : null,
+        const plant = await response.json();
+
+        // Backend Plant entity doesn't have readings, so we mock the last reading for now
+        const lastReading = null;
+
+        const transformedPlant = {
+            id: plant.id.toString(),
+            name: plant.name,
+            species: plant.species,
+            location: plant.groupId ? `Group ${plant.groupId}` : 'Unknown',
+            imageData: plant.imageUrl || null,
             lastReading,
             healthAnalysis: {
-                status,
-                needsWater,
-                needsLight,
-                recommendations,
+                status: 'good',
+                needsWater: false,
+                needsLight: false,
+                recommendations: [],
                 geminiAnalysis: "AI analysis not yet available."
-            }
-        });
+            },
+            historicalReadings: []
+        };
+
+        return NextResponse.json(transformedPlant);
     } catch (error) {
         console.error('Error fetching plant:', error);
         return NextResponse.json({ error: 'Failed to fetch plant' }, { status: 500 });
     }
 }
 
-// PUT /api/plants/:id - Update plant (including photo)
+// PUT /api/plants/:id - Update plant
 export async function PUT(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    try {
-        const { id } = await params;
-        const body = await request.json();
-        const { name, location, imageData } = body;
-
-        const updateData: any = {};
-
-        if (name) updateData.name = name;
-        if (location) updateData.location = location;
-
-        // If new image provided, re-identify plant
-        if (imageData) {
-            const identification = await identifyPlant(imageData);
-            const imageBuffer = Buffer.from(imageData.split(',')[1], 'base64');
-
-            updateData.imageData = imageBuffer;
-            updateData.identifiedSpecies = identification.commonName;
-            updateData.identificationConfidence = identification.confidence;
-            updateData.species = identification.scientificName;
-        }
-
-        const plant = await prisma.plant.update({
-            where: { id },
-            data: updateData
-        });
-
-        return NextResponse.json({
-            ...plant,
-            imageData: imageData || (plant.imageData ? `data:image/jpeg;base64,${Buffer.from(plant.imageData).toString('base64')}` : null)
-        });
-    } catch (error) {
-        console.error('Error updating plant:', error);
-        return NextResponse.json({ error: 'Failed to update plant' }, { status: 500 });
-    }
+    return NextResponse.json({ error: 'Not Implemented' }, { status: 501 });
 }
 
 // DELETE /api/plants/:id - Remove plant
@@ -121,16 +60,5 @@ export async function DELETE(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    try {
-        const { id } = await params;
-
-        await prisma.plant.delete({
-            where: { id }
-        });
-
-        return NextResponse.json({ success: true });
-    } catch (error) {
-        console.error('Error deleting plant:', error);
-        return NextResponse.json({ error: 'Failed to delete plant' }, { status: 500 });
-    }
+    return NextResponse.json({ error: 'Not Implemented' }, { status: 501 });
 }
